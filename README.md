@@ -1,1 +1,1 @@
-# machineLearning
+This is part of the submission for the Machine Learning Course for John Hopkins data science specialisation on Coursera. 
