@@ -38,6 +38,11 @@ dim(testDS)
 trainDS <- trainDS[,-c(1:7)]
 testDS <- testDS[,-c(1:7)]
 
+#perform cross validation
+fitControl = trainControl( method = "cv", number = 2)
+cv <- train(classe ~ ., data = trainDS, method = "rf", trControl = fitControl)
+cv$bestTune$mtry
+
 #create stratified random sample of data into training and test sets
 trainPart <- createDataPartition(trainDS$classe, p = 0.6, list = FALSE)
 trainData <- trainDS[trainPart, ]
@@ -53,12 +58,14 @@ rf <- foreach(ntree=rep(250, 4), .combine=randomForest::combine, .packages='rand
   randomForest(variables, classe, ntree=ntree) 
 }
 
-trainPredictions <- predict(model)
+trainPredictions <- predict(rf)
+
+# get the sample errors
 confusionMatrix(trainPredictions,trainData$classe)
 
 #to do 20 predictions for submission
 featureSet <- colnames(trainData)
-PredictForest = predict(model, newdata = testData)
+PredictForest = predict(rf, newdata = testData)
 
 #to output txt files
 pml_write_files = function(x){
