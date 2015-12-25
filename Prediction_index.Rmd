@@ -1,0 +1,108 @@
+---
+title: "Practical Machine Learning Assignment"
+author: "Sharon Ng"
+highlighter: highlight.js
+output: pdf_document
+job: null
+knit: slidify::knit2slides
+mode: selfcontained
+hitheme: tomorrow
+subtitle: null
+framework: io2012
+widgets:
+- shiny
+- interactive
+- bootstrap
+---
+
+
+<h2>Introduction</h2>
+
+<p> The following libraries are used and the seed is set to 23 for reproducibility:
+```{r, introduction, warning=FALSE}
+library(Hmisc)
+library(caret)
+library(randomForest)
+library(foreach)
+library(doParallel)
+set.seed(23)
+```
+
+<p><a href="https://github.com/shibuyume/machineLearning target=_blank">Source code is available on the GitHub.</a>
+
+--- 
+
+<h2>Exploratory Data Analysis</h2>
+
+```{r, loadData, echo=FALSE}
+trainFile <- "./pml-training.csv"
+testFile <- "./pml-testing.csv"
+trainRaw <- read.csv(trainFile, na.strings=c("NA","#DIV/0!", ""))
+testRaw <- read.csv(testFile , na.strings=c("NA", "#DIV/0!", ""))
+trainTemp <- trainRaw[,colSums(is.na(trainRaw))==0]
+testTemp <- testRaw[,colSums(is.na(testRaw))==0]
+
+```
+
+* First, read the csv files and ignore the columns with NA. After loading the data, remove the columns that are not related to calculations. 
+
+```{r removeCol}
+
+trainDS <- trainTemp[,-c(1:7)]
+testDS <- testTemp[,-c(1:7)]
+
+```
+
+* To conduct cross-validation: 
+
+```{r xValidation}
+
+fitControl = trainControl( method = "cv", number = 2)
+cv <- train(classe ~ ., data = trainDS, method = "rf", trControl = fitControl)
+
+```
+
+--- 
+
+<h2>Prediction using Random Forest</h2>
+
+* First partition the data: 
+
+```{r partition}
+
+trainPart <- createDataPartition(trainDS$classe, p = 0.6, list = FALSE)
+trainData <- trainDS[trainPart, ]
+testData <- trainDS[-trainPart,]
+
+```
+
+* Use Random Forest
+
+```{r rf}
+
+registerDoParallel()
+classe <- trainData$classe
+variables <- trainData[-ncol(trainData)]
+
+rf <- foreach(ntree=rep(250, 4), .combine=randomForest::combine, .packages='randomForest') %dopar% {
+  randomForest(variables, classe, ntree=ntree) 
+}
+
+trainPredictions <- predict(rf)
+
+```
+
+--- 
+<h2>Check the sampling error of the prediction</h2>
+
+<br>You can see that the accuracy is quite high at 99.4%.
+
+```{r matrix}
+
+confusionMatrix(trainPredictions,trainData$classe)
+
+```
+
+
+
+
